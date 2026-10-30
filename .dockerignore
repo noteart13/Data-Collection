@@ -1,0 +1,27 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# All other build artifacts, etc.
+
+# Then this one-off folder:
+/app/operations/clip/
+/app/operations/hybrid_search
+/app/operations/searchimg
+/app/operations/searchnl
+/app/operations/search_utils.py
+/app/operations/utils.py
+/app/models
+
+# ignore every .json, .txt, .csv, .py, .ipynb file directly under app/
+​/app/*.txt
+​/app/*.csv
+/app/*.ipynb
+
+# but re-include this one specific file
+!/app/aihomesearch-403643cd874c.json
+!/app/requirements.txt
+!/app/scraping_all_suburbs_fastapi.py
+!/app/main.py
+!/app/__init__.py
+

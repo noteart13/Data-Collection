@@ -1,0 +1,42 @@
+# Virtual environment & Python cache
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*
+!.env.example
+app/app/.env
+*service_account*.json
+*credentials*.json
+aihomesearch-*.json
+*.pem
+*.key
+
+# Temporary files, caches, scratch & archives
+scratch/
+*.zip
+*.tar.gz
+*.tar
+*.log
+logs/
+.cache/
+.arena/
+.idea/
+.vscode/
+.agents/
+
+# Heavy datasets and raw exports
+*.csv
+/data/raw/
+/data/checkpoints/
+*.checkpoint*
+*.sqlite3
+
+# Exceptions
+!requirements*.txt
+!app/operations/crawl4ai/models/onnx/vocab.txt

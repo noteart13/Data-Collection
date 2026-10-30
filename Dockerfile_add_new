@@ -1,0 +1,44 @@
+# 1) Base image
+FROM python:3.12-slim
+
+# 2) Environment
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    DISPLAY=:99 \
+    DBUS_SESSION_BUS_ADDRESS=/dev/null
+
+# 3) System dependencies
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      curl wget gnupg ca-certificates \
+      xvfb chromium chromium-driver \
+      jq \
+      # Add build essentials for compiling C/C++ packages
+      build-essential \
+      gcc \
+      g++ \
+      libc6-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# Point Selenium at the Debian Chromium
+ENV CHROME_BIN=/usr/bin/chromium \
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
+# 4) Python dependencies
+ENV PYTHONPATH=/app
+WORKDIR /app
+COPY app/requirements.txt ./requirements.txt
+RUN pip3 --timeout=300 --no-cache-dir install -r requirements.txt
+RUN pip3 install --no-cache-dir playwright && \
+    playwright install --with-deps chromium firefox
+# 5) App code
+COPY app/ ./
+
+# 6) Make entrypoint executable
+COPY app/docker_run_add_new.sh ./
+RUN sed -i 's/\r$//' docker_run_add_new.sh && \
+    chmod +x docker_run_add_new.sh && \
+    ls -la docker_run_add_new.sh
+
+# 7) Entrypoint
+ENTRYPOINT ["bash", "/app/docker_run_add_new.sh"]

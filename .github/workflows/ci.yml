@@ -1,0 +1,61 @@
+name: Australian Property Master CI Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  lint-and-test:
+    name: Lint & Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r app/requirements.txt
+          pip install pytest flake8 ruff
+
+      - name: Validate Python Syntax & Lint
+        run: |
+          # Stop build if there are Python syntax errors or undefined names
+          ruff check . --select=E9,F63,F7,F82 --exclude=scratch/,.venv/
+          # General lint report (warning only)
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics --exclude=scratch,.venv,.git,__pycache__
+
+      - name: Verify Environment Template
+        run: |
+          test -f .env.example || { echo "Missing .env.example!"; exit 1; }
+          # Verify that sample file does not contain real secret keys
+          ! grep -q "sk-proj-" .env.example || { echo "Leaked OpenAI key in .env.example!"; exit 1; }
+
+      - name: Run Schema & Data Quality Tests
+        run: |
+          PYTHONPATH=. pytest tests/ -v
+
+  docker-validate:
+    name: Validate Dockerfiles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Validate Dockerfile syntax
+        run: |
+          docker build --check -f Dockerfile .
+          docker build --check -f Dockerfile_add_new .

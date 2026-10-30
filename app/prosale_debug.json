@@ -1,0 +1,183 @@
+{
+    "stakeHolder": "agent",
+    "contactInfo": [
+        {
+            "firstName": "Quyen",
+            "lastName": "",
+            "email": "quyen@dynamicagents.com.au",
+            "phoneNumber": "0401545479",
+            "photo": "https://rimh2.domainstatic.com.au/UDnx_9raT6eKVKi2sFcnSLDArWE=/180x180/filters:format(webp):quality(85):no_upscale()/https://images.domain.com.au/img/35923/contact_1867917.jpeg?date=639108328088130000"
+        }
+    ],
+    "title": "Spacious Family Living in a Prime Eatons Hill Location",
+    "slug": "53-bunya-park-drive-eatons-hill-qld-4037-d13cc19a",
+    "propertyType": "House",
+    "description": "Positioned in one of Eatons Hill's most convenient and family-friendly pockets, this well-presented home offers the perfect blend of space, functionality, and lifestyle. Sitting on a generous block, 53 Bunya Park Drive delivers easy living with multiple indoor and outdoor areas designed for growing families or savvy investors.\\n\\nStep inside to discover a practical floorplan featuring a central kitchen that flows seamlessly into the dining and lounge areacreating a comfortable hub for everyday living. The home offers three well-sized bedrooms, all with built-in storage, serviced by a functional bathroom and separate toilet for added convenience.\\n\\nOutdoors is where this property truly shines, with both patio and expansive alfresco areas providing the perfect setting for entertaining, relaxing, or watching the kids play. A large double garage and additional shed add valuable storage and versatility.\\n\\nWhether you're looking to move straight in, renovate, or invest, this property presents an outstanding opportunity in a high-demand location.\\n\\nProperty Features\\n Three spacious bedrooms with built-in robes\\n Central kitchen with practical layout\\n Open-plan dining and lounge area\\n Well-appointed bathroom with separate toilet\\n Large outdoor patio and oversized alfresco entertaining area\\n Double garage with ample storage space\\n Additional shed for extra storage or workspace\\n Functional layout with great renovation potential\\n \\nLocation Highlights\\n Just a 2-minute walk to Eatons Hill State School\\n Close to Eatons Hill Village shopping precinct\\n Minutes to local parks, playgrounds, and walking tracks\\n Nearby sports centre and recreational facilities\\n Easy access to public transport\\n Short drive to major arterials for Brisbane CBD access\\n\\nThis is your chance to secure a quality home in a tightly held, family-focused location where convenience meets lifestyle. Properties in this pocket are always in demand don't miss your opportunity to make it yours!\\n\\nContact us today to arrange your inspection.",
+    "constructionYear": "N/A",
+    "structuralRemodelYear": "N/A",
+    "architecturalStyle": "None",
+    "state": "QLD",
+    "postcode": "4037",
+    "street": "53 Bunya Park Drive, Eatons Hill QLD 4037",
+    "suburb": "Eatons Hill",
+    "city": "Moreton Bay",
+    "coordinates": {
+        "lat": -27.3374743,
+        "lng": 152.9555897
+    },
+    "bed": 3,
+    "bath": 1,
+    "features": {
+        "garage": 2,
+        "floorno": 1,
+        "basement": "None",
+        "floorCovering": [
+            "None"
+        ],
+        "parking": [
+            "Carport"
+        ],
+        "roof": [
+            "Other"
+        ],
+        "view": [
+            "None"
+        ],
+        "rooms": [
+            "None"
+        ],
+        "indoorFeatures": [
+            "Built in wardrobes"
+        ],
+        "coolingTypes": [
+            "None"
+        ],
+        "heatingTypes": [
+            "None"
+        ],
+        "heatingFuels": [
+            "None"
+        ],
+        "appliances": [
+            "None"
+        ],
+        "buildingAmenities": [
+            "None"
+        ],
+        "outdoorAmenities": [
+            "Secure Parking",
+            "Courtyard",
+            "Shed",
+            "Fully fenced"
+        ],
+        "displayAddress": "fullAddress"
+    },
+    "area": {
+        "totalarea": 607,
+        "unit": "sqM"
+    },
+    "soldDateInfo": "",
+    "listingOption": "sale",
+    "expectedPrice": null,
+    "status": "for-sale",
+    "pricing": {
+        "waterBillPeriod": "monthly",
+        "councilBill": "",
+        "pricingOptions": "Contact Agent",
+        "authority": "for-sale",
+        "priceIncludes": [
+            ""
+        ]
+    },
+    "published": false,
+    "recommended": false,
+    "images": [
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f315f315f3236303430315f3037303230332d77323030302d6831343938.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f325f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f335f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f345f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f355f315f3236303430315f3037303230332d77323030302d6831333332.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f365f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f375f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f385f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f395f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f31305f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f31315f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f31325f315f3236303430315f3037303230332d77323030302d6831333334.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f31335f315f3236303430315f3037303230332d77323030302d6831333333.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f31345f315f3236303430315f3037303230332d77323030302d6831343938.jpg",
+            "category": "photo",
+            "star": false
+        },
+        {
+            "url": "gs://imgproxyprod/properties/prosale/53_bunya_park_drive_eatons_hill_qld_4037/53_bunya_park_drive_eatons_hill_qld_4037_68747470733a2f2f6275636b65742d6170692e646f6d61696e2e636f6d2e61752f76312f6275636b65742f696d6167652f323032303732383432305f31355f315f3236303430315f3037303230332d77323030302d6831343938.jpg",
+            "category": "photo",
+            "star": false
+        }
+    ],
+    "url": "https://www.domain.com.au/53-bunya-park-drive-eatons-hill-qld-4037-2020728420",
+    "agencyid": "565c488f-3241-49fb-af78-503defea95f4",
+    "agentid": [
+        "a81a1f7a-886d-54e4-9e66-1f6677ffd69a"
+    ],
+    "schoolid": [
+        "46d9335e-7603-52b9-a903-a59c6d7b8482",
+        "66c5c4b4-6136-50e2-9a3b-2f572be4891a",
+        "e9c4845e-d23c-5243-b9ac-33ac35330fc9",
+        "82f4a006-9a83-5361-814e-3d9009354349",
+        "8bc39562-a0f5-57e8-9e17-5982dadbe10e"
+    ]
+}

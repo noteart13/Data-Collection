@@ -79,15 +79,15 @@ The pipeline was benchmarked using the automated benchmark suite (`scripts/bench
 
 | Benchmark Scale | Throughput | Enrichment Success | Completeness | Accuracy | Error Rate | Recovery Time | Peak RAM | Peak CPU | Est. Cost (USD) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1,000 records** | **22,811 rec/s** | 93.2% | 97.5% | 99.9% | 0.80% | **0.061s** | 22.9 MB | 41.9% | < $0.001 |
-| **10,000 records** | **28,440 rec/s** | 93.5% | 96.8% | 99.8% | 0.54% | **0.410s** | 47.7 MB | 80.0% | $0.007 |
-| **100,000 records** | **3,481 rec/s** | 93.4% | 96.6% | 99.8% | 0.50% | **29.038s** | 256.9 MB | 82.4% | $0.076 |
+| **1,000 records** | **22,811 rec/s** | 93.2% | 97.5% | 99.9% | 0.80% | **0.061s** | 22.9 MB | 41.9% | < \$0.001 |
+| **10,000 records** | **28,440 rec/s** | 93.5% | 96.8% | 99.8% | 0.54% | **0.410s** | 47.7 MB | 80.0% | \$0.007 |
+| **100,000 records** | **3,481 rec/s** | 93.4% | 96.6% | 99.8% | 0.50% | **29.038s** | 256.9 MB | 82.4% | \$0.076 |
 
 ### Extrapolation to National Scale (16M+ G-NAF Register)
 Based on empirical throughput of **3,481 records/sec** at 100K batch scale with 8 workers:
-- **1,000,000 records**: ~4.8 minutes | ~$1.21 USD compute & vector DB cost.
-- **5,000,000 records**: ~23.9 minutes | ~$5.82 USD compute & vector DB cost.
-- **16,000,000 records**: ~1.27 hours | ~$18.32 USD compute & vector DB cost.
+- **1,000,000 records**: ~4.8 minutes | ~\$1.21 USD compute & vector DB cost.
+- **5,000,000 records**: ~23.9 minutes | ~\$5.82 USD compute & vector DB cost.
+- **16,000,000 records**: ~1.27 hours | ~\$18.32 USD compute & vector DB cost.
 
 *(Full detailed report and methodology available at [`docs/data_pipeline_benchmark_report.md`](docs/data_pipeline_benchmark_report.md))*
 
@@ -95,18 +95,21 @@ Based on empirical throughput of **3,481 records/sec** at 100K batch scale with 
 
 ## Table of Contents
 
-- [System Architecture](#-system-architecture)
-- [Repository Structure](#-repository-structure)
-- [Feature Readiness Matrix](#-feature-readiness--component-maturity-matrix)
-- [Statutory First Strategy](#-statutory-first--open-data-strategy)
-- [Benchmark Report](#-empirical-data-pipeline-benchmark-report)
-- [Core Technology Pillars](#-core-technology-pillars)
-- [Unified Pipeline CLI (`cli.py`)](#-unified-pipeline-cli-clipy)
-- [Decoupled 4-Stage Architecture](#-decoupled-4-stage-pipeline-architecture)
-- [Resilient Checkpointing & Resumption](#-resilient-checkpointing--incremental-processing)
-- [FastAPI Web Service & Security](#-fastapi-web-service-reference)
-- [Data Quality Framework](#-data-contracts-quality-auditing--schemas)
-- [Testing & Quality Verification](#-testing--quality-verification)
+- [System Architecture](#system-architecture)
+- [Repository Structure](#repository-structure)
+- [Feature Readiness Matrix](#feature-readiness--component-maturity-matrix)
+- [Statutory First Strategy](#statutory-first--open-data-strategy)
+- [Benchmark Report](#empirical-data-pipeline-benchmark-report)
+- [Core Technology Pillars](#core-technology-pillars)
+- [Unified Pipeline CLI (`cli.py`)](#unified-pipeline-cli-clipy)
+- [Decoupled 4-Stage Architecture](#decoupled-4-stage-pipeline-architecture)
+- [Resilient Checkpointing & Resumption](#resilient-checkpointing--incremental-processing)
+- [FastAPI Web Service & Security](#fastapi-web-service-reference--security-architecture)
+- [Data Quality Framework](#data-contracts-quality-auditing--schemas)
+- [Containerization & Kubernetes](#containerization--production-kubernetes-deployment)
+- [Testing & Quality Verification](#testing--quality-verification)
+- [Operational Guidelines](#production-performance--operational-guidelines)
+- [License & Support](#license--support)
 
 ---
 
@@ -262,10 +265,15 @@ Phase 2 replaces static heuristics with machine learning valuation models and mu
 
 1. **Machine Learning Automated Valuation Model (`app/operations/ml_avm.py`)**:
    - **11-Dimensional Feature Engineering**:
-     $$\mathbf{x} = [\text{lat}, \text{lon}, d_{\text{cbd}}, \text{bed}, \text{bath}, \text{parking}, \text{area}_{\text{sqm}}, \mathbb{I}_{\text{house}}, \mathbb{I}_{\text{unit}}, \mathbb{I}_{\text{townhouse}}, P_{\text{state\_base}}]$$
+     ```math
+     \mathbf{x} = [\text{lat}, \text{lon}, d_{\text{cbd}}, \text{bed}, \text{bath}, \text{parking}, \text{area}_{\text{sqm}}, \mathbb{I}_{\text{house}}, \mathbb{I}_{\text{unit}}, \mathbb{I}_{\text{townhouse}}, P_{\text{state\_base}}]
+     ```
+     Vector components: Latitude, Longitude, CBD distance (`d_cbd`), Bedrooms, Bathrooms, Parking, Land Area (`area_sqm`), Property Category One-Hot Flags (`is_house`, `is_unit`, `is_townhouse`), and State Median Price Baseline (`P_state_base`).
    - **Urban Rent-Gradient Distance Decay**: Computes great-circle Haversine distances to Australian Capital City CBD coordinates (Sydney, Melbourne, Brisbane, Perth, Adelaide, Canberra, Hobart, Darwin).
    - **Gradient Boosting Hedonic Pricing**: Trains `GradientBoostingRegressor` with **Huber loss** (robust against extreme luxury outliers) and benchmarks against bank standards:
-     $$\text{MdAPE} = \text{median}\left(\left|\frac{y_i - \hat{y}_i}{y_i}\right|\right) \le 12.0\%$$
+     ```math
+     \text{MdAPE} = \text{median}\left(\left|\frac{y_i - \hat{y}_i}{y_i}\right|\right) \le 12.0\%
+     ```
    - **Statistical Confidence Intervals**: Generates `valuation_mid`, `valuation_low` (10th percentile bound), `valuation_high` (90th percentile bound), and an integrity `confidence_score` (0.0 to 1.0).
 
 2. **Multimodal Visual Search & Embeddings (`app/operations/multimodal_search.py`)**:
@@ -288,8 +296,10 @@ Phase 3 transitions the platform from isolated coordinate points to polygonal la
 1. **Cadastral Parcel Geometry & Shoelace Area (`app/operations/cadastral_spatial.py`)**:
    - **Zero C-GIS Dependencies**: Pure Python and NumPy implementation operating without heavy GDAL/GEOS system binaries.
    - **Ray-Casting Point-in-Polygon (PIP)**: Exact containment validation verifying whether property coordinate points fall within legal boundary vertices.
-   - **Geodesic Shoelace Land Area**: Accurately computes parcel surface area in square meters ($m^2$) under spherical Earth projection:
-     $$\text{Area} = \frac{R^2}{2} \left| \sum_{i=1}^{n} (\lambda_{i+1} - \lambda_{i-1}) \sin(\phi_i) \right|$$
+   - **Geodesic Shoelace Land Area**: Accurately computes parcel surface area in square meters (m²) under spherical Earth projection:
+     ```math
+     \text{Area} = \frac{R^2}{2} \left| \sum_{i=1}^{n} (\lambda_{i+1} - \lambda_{i-1}) \sin(\phi_i) \right|
+     ```
    - **Comprehensive Planning & Zoning Engine**: Official mapping of NSW Standard LEP codes (`R1-R5`, `B1-B4`, `IN1-IN2`, `RU1-RU2`, `E1-E2`, `SP1-SP2`) and ACT Territory Plan codes (`RZ1-RZ5`, `CZ1-CZ5`, `PRZ1`, `NUZ1`).
    - **GeoJSON Compliance**: Emits RFC 7946 compliant GeoJSON `Polygon` features directly compatible with Qdrant spatial payloads.
 
@@ -320,8 +330,8 @@ Phase 4 replaces synthetic random attribute generation with 100% verified real-w
 2. **Statutory Planning & Strata Resolution**:
    - **NSW Planning Portal Open Spatial REST API**: Authoritative LEP zoning (`R3`, `R4`, `B4`), Height of Building (HOB), and Floor Space Ratio (FSR).
    - **Strata Scheme Resolver (`StrataChecks` / `OnTheHouse`)**: Discovers legal Torrens Title lot/plan (`Lot 6/SP106542`), building total lots, and strata unit entitlement area (e.g. 304 m² vs 1,771 m² parent block).
-   - **Statutory Municipal Rates Schedule**: Official LGA council rate schedules (e.g. Lane Cove: $1,420 p.a.) replacing arbitrary price-based formulas.
-   - **Statutory Water Utility Tariffs**: Official quarterly service charges (Sydney Water: $185.45/quarter) replacing hardcoded dummy strings.
+   - **Statutory Municipal Rates Schedule**: Official LGA council rate schedules (e.g. Lane Cove: \$1,420 p.a.) replacing arbitrary price-based formulas.
+   - **Statutory Water Utility Tariffs**: Official quarterly service charges (Sydney Water: \$185.45/quarter) replacing hardcoded dummy strings.
 
 ---
 
@@ -550,7 +560,7 @@ python cli.py geofence-monitor --center-lat -33.7975 --center-lon 151.1809 --rad
 ```
 
 #### 17. Inspect Cadastral Parcel Geometry & Zoning
-Calculate geodesic Shoelace land area in $m^2$, inspect parcel vertices, and resolve LEP/Territory Plan zoning.
+Calculate geodesic Shoelace land area in m², inspect parcel vertices, and resolve LEP/Territory Plan zoning.
 ```bash
 python cli.py parcel-inspect --lat -33.8688 --lon 151.2093 --area 550 --zoning R2 --state NSW
 ```
@@ -761,7 +771,7 @@ The platform enforces strict Pydantic V2 data validation and metadata scoring in
 | Category | Points | Criteria Evaluated |
 | :--- | :--- | :--- |
 | **Address Core Integrity** | **30 pts** | Valid street, suburb, state (20 pts), 4-digit postcode (5 pts), valid lat/lon coordinates (5 pts). |
-| **Living Metrics Quality** | **30 pts** | Valid bed count > 0 (10 pts), bath count > 0 (10 pts), land/internal area > 10 $m^2$ (10 pts). |
+| **Living Metrics Quality** | **30 pts** | Valid bed count > 0 (10 pts), bath count > 0 (10 pts), land/internal area > 10 m² (10 pts). |
 | **Valuation & Sales History**| **25 pts** | Expected price > \$50,000 (10 pts), settled sales history present (10 pts), official government verified source (5 pts). |
 | **Richness & Cadastral Media**| **15 pts** | Description text > 80 chars (5 pts), listing images present (5 pts), realistic construction year (5 pts). |
 

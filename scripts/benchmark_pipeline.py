@@ -200,7 +200,7 @@ def generate_markdown_report(results: List[Dict[str, Any]], output_path: str):
             f"{r['enrichment_success_pct']:.1f}% | {r['completeness_pct']:.1f}% | "
             f"{r['accuracy_pct']:.1f}% | {r['error_rate_pct']:.2f}% | "
             f"{r['recovery_time_sec']:.3f}s | {r['peak_ram_mb']:.1f} MB | "
-            f"{r['peak_cpu_pct']:.1f}% | ${r['estimated_cost_usd']:.5f} |"
+            f"{r['peak_cpu_pct']:.1f}% | \\${r['estimated_cost_usd']:.5f} |"
         )
     md.append("\n")
 
@@ -218,9 +218,9 @@ def generate_markdown_report(results: List[Dict[str, Any]], output_path: str):
     md.append("Based on empirical throughput of **{:,.1f} records/second** (at 100K batch scale with 8 workers):\n".format(throughput_100k))
     md.append("| Target National Scope | Records | Est. Elapsed Time | Est. Compute & DB Cost | Memory Footprint (Chunked) |")
     md.append("| :--- | :--- | :--- | :--- | :--- |")
-    md.append(f"| Major Metro Suburbs (Sydney/Melb) | 1,000,000 | ~{time_1m_sec/60:.1f} minutes | ${cost_1m:.2f} USD | < 450 MB |")
-    md.append(f"| Eastern Seaboard (NSW + VIC + QLD) | 5,000,000 | ~{time_5m_sec/3600:.2f} hours | ${cost_5m:.2f} USD | < 650 MB |")
-    md.append(f"| **National G-NAF Full Australia** | **16,000,000** | **~{time_16m_sec/3600:.2f} hours** | **${cost_16m:.2f} USD** | **< 850 MB** |\n")
+    md.append(f"| Major Metro Suburbs (Sydney/Melb) | 1,000,000 | ~{time_1m_sec/60:.1f} minutes | \\${cost_1m:.2f} USD | < 450 MB |")
+    md.append(f"| Eastern Seaboard (NSW + VIC + QLD) | 5,000,000 | ~{time_5m_sec/3600:.2f} hours | \\${cost_5m:.2f} USD | < 650 MB |")
+    md.append(f"| **National G-NAF Full Australia** | **16,000,000** | **~{time_16m_sec/3600:.2f} hours** | \\${cost_16m:.2f} USD | **< 850 MB** |\n")
 
     md.append("## 5. Architectural Reliability Verification")
     md.append("1. **Zero-Duplicate Resumption**: Injected simulated faults at 50% across benchmarks verified that `CheckpointManager` resumes at the exact offset with 0 duplicate records committed.")

@@ -14,6 +14,14 @@ import random
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+# Prevent app/app from shadowing the root app package
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_APP_DIR = Path(__file__).resolve().parent
+while str(_APP_DIR) in sys.path:
+    sys.path.remove(str(_APP_DIR))
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 from dotenv import load_dotenv
 
 load_dotenv()

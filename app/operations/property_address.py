@@ -437,11 +437,11 @@ class ProRentMeta(object):
         pro_meta['description'] = text[0].get('description','')
         pro_meta['rentPrice'] = self.extract_rent_price(priceOptions[0])
         pro_meta['features'] = {
-            "appliances": ["None"], "basement": "None", "buildingAmenities": ["None"],
-            "coolingTypes": ["None"], "displayAddress": "fullAddress", "floorCovering": ["None"],
-            "floorNo": 1, "garage": text[0].get('carspaces',''), "heatingFuels": ["None"], "heatingTypes": ["None"],
+            "appliances": [], "basement": None, "buildingAmenities": [],
+            "coolingTypes": [], "displayAddress": "fullAddress", "floorCovering": [],
+            "floorNo": None, "garage": text[0].get('carspaces',''), "heatingFuels": [], "heatingTypes": [],
             "indoorFeatures": indoorFeatures, "outdoorAmenities": outdoorAmenities, "parking": ["Carport"],
-            "roof": ["Other"], "rooms": ["None"], "view": ["None"]
+            "roof": [], "rooms": [], "view": []
         }
         images = self.images()
         pro_meta['images'] = [

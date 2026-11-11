@@ -35,6 +35,7 @@ logs/
 /data/raw/
 /data/checkpoints/
 *.checkpoint*
+*checkpoint*.json
 *.sqlite3
 
 # Exceptions

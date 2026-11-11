@@ -600,15 +600,15 @@ class PropertyMeta:
     def features(self, garage):
         features = {
             "garage": garage,
-            "floorNo": 1,
+            "floorNo": None,
             "indoorFeatures": [],
             "outdoorAmenities": [],
-            "basement": "None",
-            "floorCovering": ["None"],
-            "roof": ["Other"],
-            "view": ["None"],
-            "appliances": ["None"],
-            "buildingAmenities": ["None"],
+            "basement": None,
+            "floorCovering": [],
+            "roof": [],
+            "view": [],
+            "appliances": [],
+            "buildingAmenities": [],
             "displayAddress": "fullAddress",
         }
 

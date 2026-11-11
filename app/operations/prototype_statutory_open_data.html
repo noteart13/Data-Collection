@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PROTOTYPE - Statutory Open Data Evidence Gate</title>
+  <style>
+    :root { --ink:#17202a; --muted:#607080; --line:#dce3e8; --bg:#f4f7f8; --card:#fff; --accent:#087f5b; --bad:#c92a2a; --warn:#e67700; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
+    main { max-width:1180px; margin:auto; padding:32px 20px 60px; }
+    h1 { margin:0 0 8px; font-size:28px; }
+    h2 { margin:0 0 14px; font-size:19px; }
+    p { margin:6px 0 14px; }
+    .banner { border-left:5px solid var(--warn); background:#fff4e6; padding:13px 16px; margin:20px 0; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 4px 16px #1f293708; }
+    .wide { grid-column:1/-1; }
+    .facts { display:grid; grid-template-columns:190px 1fr; gap:7px 14px; }
+    .facts dt { color:var(--muted); }
+    .facts dd { margin:0; font-weight:600; }
+    button { border:0; border-radius:8px; padding:10px 13px; background:#e7f5ff; color:#075985; font-weight:700; cursor:pointer; margin:4px 5px 4px 0; }
+    button.primary { background:var(--accent); color:white; }
+    button.danger { background:#fff0f0; color:var(--bad); }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+    .tabs button.active { background:#212529; color:white; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:9px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    .ok { color:var(--accent); font-weight:800; }
+    .no { color:var(--bad); font-weight:800; }
+    .maybe { color:var(--warn); font-weight:800; }
+    .log { max-height:210px; overflow:auto; background:#17202a; color:#e9ecef; border-radius:8px; padding:12px; font:13px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .source { font-size:12px; color:var(--muted); word-break:break-all; }
+    @media(max-width:800px){ .grid{grid-template-columns:1fr}.wide{grid-column:auto}.facts{grid-template-columns:1fr}.facts dd{margin-bottom:8px} }
+  </style>
+</head>
+<body>
+<main>
+  <h1>PROTOTYPE: Statutory Open Data Evidence Gate</h1>
+  <p><strong>Câu hỏi:</strong> giải pháp champion có thể làm giàu các field bị bỏ qua bằng nguồn mở/chính thức mà không biến suy luận thành dữ liệu “verified” hay không?</p>
+  <div class="banner"><strong>Throwaway prototype — không kết nối và không ghi Qdrant.</strong> Snapshot bên dưới được lấy read-only ngày 02/11/2026 cho 6/8 Mindarie Street. Mục đích là kiểm tra logic chấp nhận/từ chối evidence trước khi viết adapter production.</div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Ca kiểm thử</h2>
+      <dl class="facts">
+        <dt>Địa chỉ</dt><dd>6/8 Mindarie Street, Lane Cove North NSW 2066</dd>
+        <dt>G-NAF PID</dt><dd>GANSW721825753</dd>
+        <dt>Tọa độ</dt><dd>-33.80610183, 151.15909063</dd>
+        <dt>NSW PSI</dt><dd>Lot 6 · 304 m² · sold $2,090,000 on 2021-05-27</dd>
+        <dt>Cadastre live</dt><dd>SP106542 · scheme polygon 1756.465 m² · lot number null</dd>
+        <dt>Planning live</dt><dd>R4 · FSR 1.4 · maximum height 11.5 m</dd>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Free play</h2>
+      <p>Bấm theo bất kỳ thứ tự nào. Mọi action đều đi qua evidence gate thuần.</p>
+      <button data-action="LOAD">Nạp snapshot nguồn thật</button>
+      <button class="primary" data-action="SAFE">Áp dụng field an toàn</button>
+      <button class="danger" data-action="CHAMPION">Thử toàn bộ claim champion</button>
+      <button data-action="RESET">Reset</button>
+      <p id="last-change" class="source"></p>
+    </section>
+
+    <section class="card wide">
+      <h2>Trạng thái payload đề xuất</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Giá trị ứng viên</th><th>Verdict</th><th>Lý do</th></tr></thead>
+        <tbody id="field-table"></tbody>
+      </table>
+    </section>
+
+    <section class="card wide">
+      <h2>Guided walkthroughs</h2>
+      <div class="tabs" id="tabs"></div>
+      <div id="scenario"></div>
+    </section>
+
+    <section class="card wide">
+      <h2>Nhật ký state transition</h2>
+      <div id="log" class="log"></div>
+    </section>
+
+    <section class="card wide">
+      <h2>Nguồn snapshot</h2>
+      <div class="source">
+        NSW Planning: https://mapprod3.environment.nsw.gov.au/arcgis/rest/services/Planning/EPI_Primary_Planning_Layers/MapServer<br>
+        NSW Cadastre: https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Land_Parcel_Property_Theme/FeatureServer/8<br>
+        NSW PSI: https://www.valuergeneral.nsw.gov.au/design/bulk_psi_content/bulk_psi<br>
+        PlanningAlerts access: https://www.planningalerts.org.au/api/howto
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+// Portable pure module: this is the logic worth lifting into a production adapter.
+const EvidenceGate = (() => {
+  const candidates = [
+    {field:'planning.zoning', value:'R4', kind:'official_exact_coordinate', verdict:'accepted', reason:'Official NSW EPI polygon intersects verified G-NAF coordinate.'},
+    {field:'planning.floorSpaceRatio', value:1.4, kind:'official_exact_coordinate', verdict:'accepted', reason:'Official NSW FSR layer at the property coordinate.'},
+    {field:'planning.maxBuildingHeight', value:'11.5 m', kind:'official_exact_coordinate', verdict:'accepted', reason:'Official NSW HOB layer at the property coordinate.'},
+    {field:'strataDetails.plan', value:'SP106542', kind:'official_exact_coordinate', verdict:'accepted', reason:'NSW Spatial cadastre scheme polygon; corroborated by PSI strata lot.'},
+    {field:'strataDetails.schemeParcelArea', value:'1756.465 m²', kind:'official_scheme', verdict:'accepted', reason:'Plan polygon area; deliberately not mapped to unit totalArea.'},
+    {field:'area.totalArea', value:'304 m²', kind:'ambiguous_official', verdict:'rejected', reason:'PSI area semantics do not prove internal apartment floor area.'},
+    {field:'constructionYear', value:'2023', kind:'derived_plan_date', verdict:'rejected', reason:'Cadastre feature/plan date is not statutory proof of physical completion.'},
+    {field:'bed', value:null, kind:'missing', verdict:'unavailable', reason:'No exact-unit BASIX/DA field was found in the public pilot.'},
+    {field:'bath', value:null, kind:'missing', verdict:'unavailable', reason:'Bathroom fixtures in a certificate are not necessarily a stable bathroom count.'},
+    {field:'features.garage', value:null, kind:'missing', verdict:'unavailable', reason:'No exact-unit parking evidence returned by the tested official endpoints.'},
+    {field:'pricing.weeklyRent', value:null, kind:'postcode_aggregate', verdict:'rejected', reason:'Rental Bond statistics are postcode cohorts, not exact-property rent.'},
+    {field:'pricing.estimatedYield', value:null, kind:'derived_missing_inputs', verdict:'rejected', reason:'An exact formula does not make estimated inputs exact.'},
+    {field:'pricing.councilBill', value:null, kind:'formula_only', verdict:'rejected', reason:'Council rate schedules do not reproduce the owner notice without all property/account inputs.'},
+    {field:'pricing.waterBillPeriod', value:'quarterly', kind:'generic_tariff', verdict:'rejected', reason:'Authority tariff is not an exact property bill or billing record.'},
+    {field:'status', value:'off_market', kind:'default', verdict:'rejected', reason:'Absence of an official listing register cannot prove off-market status.'},
+    {field:'listingOption', value:'off_market', kind:'default', verdict:'rejected', reason:'A statutory registry has no current listing-channel state.'},
+    {field:'title', value:'6/8 Mindarie Street, Lane Cove North NSW 2066', kind:'derived_address', verdict:'derived', reason:'Safe display label derived only from verified address fields.'},
+    {field:'description', value:'Lot 6 in SP106542; R4; FSR 1.4; HOB 11.5 m.', kind:'derived_facts', verdict:'derived', reason:'Can be generated, but must be labelled derived rather than source description.'},
+    {field:'images', value:null, kind:'policy_excluded', verdict:'unavailable', reason:'Pilot follows no-new-images policy; orthophoto is not a facade/floorplan.'}
+  ];
+
+  const initial = () => ({loaded:false, mode:'empty', fields:[], log:['Prototype reset. No values proposed.'], last:'Reset complete.'});
+  const show = (mode) => candidates.map(c => ({...c, active: mode === 'champion' || (mode === 'safe' && ['accepted','derived'].includes(c.verdict))}));
+  const reduce = (state, action) => {
+    if (action.type === 'RESET') return initial();
+    if (action.type === 'LOAD') return {...state, loaded:true, mode:'review', fields:show('review'), last:'Loaded read-only official snapshot.', log:[...state.log,'Loaded live-source snapshot; no payload changes.']};
+    if (action.type === 'SAFE') return {...state, loaded:true, mode:'safe', fields:show('safe'), last:'Accepted 7 source-backed/derived fields; rejected ambiguous fields.', log:[...state.log,'Evidence gate accepted planning, plan identity, scheme parcel area, derived title and factual summary.']};
+    if (action.type === 'CHAMPION') return {...state, loaded:true, mode:'champion', fields:show('champion'), last:'Evaluated all champion claims; unsafe values remain rejected.', log:[...state.log,'Champion claims evaluated. Rejection is preserved for ambiguous, aggregate, default and missing evidence.']};
+    return state;
+  };
+  return {initial, reduce};
+})();
+
+let state = EvidenceGate.initial();
+const scenarios = [
+  {name:'Nguồn chính thức hoạt động', text:'Xác nhận những field thật sự trả về từ NSW Planning và NSW Spatial.', steps:[['LOAD','1. Nạp nguồn thật'],['SAFE','2. Chấp nhận field an toàn']]},
+  {name:'Suy luận strata sai', text:'Thử claim DP/SP date = constructionYear và PSI/entitlement = internal floor area.', steps:[['LOAD','1. Nạp nguồn'],['CHAMPION','2. Thử claim champion']]},
+  {name:'Độ phủ đầy đủ', text:'Kiểm tra liệu nguồn mở có thực sự fill bed/bath/rent/status/bills hay không.', steps:[['CHAMPION','1. Đánh giá toàn bộ field']]}
+];
+let activeScenario = 0;
+
+function dispatch(type) { state = EvidenceGate.reduce(state,{type}); render(); }
+function verdictClass(v){ return v==='accepted'||v==='derived'?'ok':v==='rejected'?'no':'maybe'; }
+function render(){
+  const rows = state.fields.length ? state.fields : [{field:'—',value:'Chưa nạp',verdict:'unavailable',reason:'Bấm “Nạp snapshot nguồn thật”.'}];
+  document.querySelector('#field-table').innerHTML = rows.map(x => `<tr><td><code>${x.field}</code></td><td>${x.value===null?'null':x.value}</td><td class="${verdictClass(x.verdict)}">${x.verdict}${x.active?' · active':''}</td><td>${x.reason}</td></tr>`).join('');
+  document.querySelector('#last-change').textContent = state.last;
+  document.querySelector('#log').innerHTML = state.log.map((x,i)=>`${i+1}. ${x}`).join('<br>');
+  document.querySelector('#tabs').innerHTML = scenarios.map((s,i)=>`<button class="${i===activeScenario?'active':''}" data-tab="${i}">${s.name}</button>`).join('');
+  const s=scenarios[activeScenario];
+  document.querySelector('#scenario').innerHTML = `<p>${s.text}</p>${s.steps.map(([a,l])=>`<button data-step="${a}">${l}</button>`).join('')}`;
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{activeScenario=Number(b.dataset.tab);state=EvidenceGate.initial();render();});
+  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>dispatch(b.dataset.step));
+}
+document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>dispatch(b.dataset.action));
+render();
+</script>
+</body>
+</html>

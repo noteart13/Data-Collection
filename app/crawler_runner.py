@@ -14,6 +14,16 @@ import signal
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
+# Fix: Prevent app/app from shadowing the root app package
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_APP_DIR = Path(__file__).resolve().parent
+while str(_APP_DIR) in sys.path:
+    sys.path.remove(str(_APP_DIR))
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+PROJECT_ROOT = _PROJECT_ROOT
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,8 +31,6 @@ load_dotenv()
 from app.operations.proxy_manager import SmartProxyManager
 from app.operations.stealth_crawler import StealthCrawler, parse_domain_search_page
 from app.operations.listing_cdc import ListingCDCEngine, CDCEvent
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class CrawlerOrchestrator:
@@ -36,12 +44,14 @@ class CrawlerOrchestrator:
         workers: int = 2,
         max_pages: int = 5,
         proxy_file: Optional[str] = None,
-        dry_run: bool = False
+        dry_run: bool = False,
+        headless: bool = True,
     ):
         self.status = status.lower()
         self.workers = workers
         self.max_pages = max_pages
         self.dry_run = dry_run
+        self.headless = headless
         self.stop_requested = False
 
         # Initialize Proxy Manager
@@ -86,7 +96,8 @@ class CrawlerOrchestrator:
             self.stats["pages_fetched"] += 1
 
             if not html:
-                print(f"  ⚠️ Failed or blocked on page {page_no}. Skipping remainder of suburb.")
+                err_detail = f" -> {crawler.last_error}" if getattr(crawler, "last_error", None) else ""
+                print(f"  ⚠️ Failed or blocked on page {page_no}{err_detail}. Skipping remainder of suburb.")
                 break
 
             items = parse_domain_search_page(html)
@@ -119,7 +130,7 @@ class CrawlerOrchestrator:
         print("=" * 70)
 
         t0 = time.time()
-        crawler = StealthCrawler(proxy_manager=self.proxy_manager, headless=True)
+        crawler = StealthCrawler(proxy_manager=self.proxy_manager, headless=self.headless)
         await crawler.start()
 
         try:
@@ -180,6 +191,7 @@ def main():
     parser.add_argument("--max-pages", type=int, default=3, help="Max search pages per suburb")
     parser.add_argument("--proxy-file", default=None, help="Path to proxy list text file")
     parser.add_argument("--dry-run", action="store_true", help="Scrape without writing to Qdrant")
+    parser.add_argument("--headful", action="store_true", help="Launch visible browser window (helps bypass anti-bot challenges)")
 
     args = parser.parse_args()
 
@@ -189,7 +201,8 @@ def main():
         workers=args.workers,
         max_pages=args.max_pages,
         proxy_file=args.proxy_file,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        headless=not args.headful,
     )
 
     asyncio.run(orchestrator.run(target_suburbs))

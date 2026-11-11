@@ -6,6 +6,7 @@ Coordinates data ingestion, validation, deduplication, enrichment, and quality a
 
 import argparse
 import os
+import re
 import sys
 import subprocess
 import time
@@ -13,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from typing import Optional, List, Dict, Any
+from urllib.parse import urlparse
 
 # Ensure UTF-8 output on Windows console
 if sys.platform == "win32":
@@ -157,6 +159,26 @@ def cmd_audit_quality(args):
         print(f"Quality audit failed: {e}")
 
 
+def cmd_view_payload(args):
+    """Inspect and display property payloads in Qdrant (sold, sale, rent)."""
+    try:
+        from scripts.tools.view_payload import view_payloads
+    except ImportError:
+        import sys
+        sys.path.insert(0, str(BASE_DIR))
+        from scripts.tools.view_payload import view_payloads
+
+    view_payloads(
+        status=args.status,
+        state=args.state,
+        suburb=args.suburb,
+        collection=args.collection,
+        limit=args.limit,
+        raw_json=args.raw_json
+    )
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # 3. PIPELINE WRAPPERS: Execution helpers
 # ---------------------------------------------------------------------------
@@ -172,7 +194,9 @@ def run_script(script_name: str, extra_args: List[str] = None):
     print("=" * 70)
     start_time = time.time()
     try:
-        proc = subprocess.run(cmd, cwd=str(BASE_DIR))
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(BASE_DIR) + os.pathsep + env.get("PYTHONPATH", "")
+        proc = subprocess.run(cmd, cwd=str(BASE_DIR), env=env)
         elapsed = time.time() - start_time
         print("=" * 70)
         print(f"[CLI] Script {script_name} finished in {elapsed:.1f}s (Exit code: {proc.returncode})")
@@ -243,6 +267,166 @@ def cmd_bulk_enrich(args):
         params.append("--dry-run")
     if args.force:
         params.append("--force")
+    if getattr(args, "skip_portal", False):
+        params.append("--skip-portal")
+    if getattr(args, "portal_fields", None):
+        params.extend(["--portal-fields", *args.portal_fields])
+    if getattr(args, "no_images", False):
+        params.append("--no-images")
+    if getattr(args, "property_browser_fallback", False):
+        params.append("--property-browser-fallback")
+    if getattr(args, "property_browser_headless", False):
+        params.append("--property-browser-headless")
+    if getattr(args, "use_property_source", False):
+        params.append("--use-property-source")
+    else:
+        params.append("--skip-property-source")
+    if getattr(args, "rollback_journal", None):
+        params.extend(["--rollback-journal", args.rollback_journal])
+    if getattr(args, "reset_checkpoint", False):
+        params.append("--reset-checkpoint")
+    return run_script("bulk_enrich_master.py", params)
+
+
+SELF_ENRICH_FIELDS = (
+    "bed",
+    "bath",
+    "garage",
+    "totalArea",
+    "constructionYear",
+    "expectedPrice",
+    "valuation_low",
+    "valuation_high",
+    "weeklyRent",
+    "estimatedYield",
+    "features_list",
+    "realestate_url",
+    "propertyType",
+    "title",
+    "description",
+    "historysale",
+    "status",
+    "listingOption",
+    "soldDateInfo",
+)
+SELF_ENRICH_STATES = ("ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA")
+
+
+def _self_enrich_scope(state: str, suburb: Optional[str]) -> str:
+    scope = state.upper()
+    if suburb:
+        suburb_slug = re.sub(r"[^a-z0-9]+", "-", suburb.lower()).strip("-")
+        scope = f"{scope}_{suburb_slug}"
+    return scope
+
+
+def _is_local_http_qdrant(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.scheme == "http" and (parsed.hostname or "").lower() in {
+        "127.0.0.1",
+        "localhost",
+        "::1",
+    }
+
+
+def build_self_enrich_params(args) -> List[str]:
+    """Expand the concise self-enrich command into safe bulk-enrich flags."""
+    state = str(args.state or "").upper()
+    if state == "ALL" or state not in SELF_ENRICH_STATES:
+        raise ValueError("self-enrich requires exactly one state")
+
+    apply_changes = bool(args.apply)
+    fast_mode = bool(getattr(args, "fast", False))
+    if apply_changes and fast_mode:
+        raise ValueError("--fast is a dry-run probe and cannot be combined with --apply")
+    requested_fields = tuple(
+        getattr(args, "fields", None)
+        or (("bed", "bath") if fast_mode else SELF_ENRICH_FIELDS)
+    )
+    unknown_fields = set(requested_fields) - set(SELF_ENRICH_FIELDS)
+    if unknown_fields:
+        raise ValueError(
+            "unsupported self-enrich field(s): " + ", ".join(sorted(unknown_fields))
+        )
+    workers = args.workers if args.workers is not None else (2 if apply_changes else 1)
+    batch_size = args.batch_size if args.batch_size is not None else (25 if apply_changes else 5)
+    limit = args.limit if args.limit is not None else (None if apply_changes else (1 if fast_mode else 5))
+    if workers < 1 or batch_size < 1 or (limit is not None and limit < 0):
+        raise ValueError("workers and batch-size must be positive; limit cannot be negative")
+
+    scope = _self_enrich_scope(state, args.suburb)
+    checkpoint = str(Path("scratch") / f"self_enrich_{scope}_checkpoint.json")
+    rollback = str(Path("scratch") / f"self_enrich_{scope}_rollback.jsonl.gz")
+    official_dataset = str(Path("scratch") / "archive.zip")
+
+    params = [
+        "--state", state,
+        "--workers", str(workers),
+        "--batch-size", str(batch_size),
+        "--portal-fields", *requested_fields,
+        "--no-images",
+        "--preserve-payload-shape",
+        "--skip-property-source",
+        "--property-browser-fallback",
+        "--checkpoint-path", checkpoint,
+        "--nsw-psi-zip", official_dataset,
+    ]
+    if args.suburb:
+        params.extend(["--suburb", args.suburb])
+    if limit is not None:
+        params.extend(["--limit", str(limit)])
+    if fast_mode:
+        params.extend([
+            "--portal-http-max-candidates", "1",
+            "--portal-browser-max-candidates", "1",
+            "--portal-browser-timeout", "30",
+        ])
+    if args.refresh:
+        params.extend(["--force", "--reset-checkpoint"])
+
+    if apply_changes:
+        params.extend(["--rollback-journal", rollback])
+    else:
+        params.extend(["--dry-run", "--no-retry-outages"])
+
+    use_local = bool(getattr(args, "local", False))
+    if use_local:
+        qdrant_url = "http://127.0.0.1:6333"
+        qdrant_key = (
+            getattr(args, "local_api_key", None)
+            or os.getenv("LOCAL_QDRANT_API_KEY")
+            or "local-qdrant-key"
+        )
+        params.extend(["--url", qdrant_url, "--api-key", qdrant_key])
+    else:
+        qdrant_url = os.getenv("QDRANT_URI", "http://localhost:6333")
+        qdrant_key = os.getenv("QDRANT_API", "").strip('"').strip("'")
+    parsed_qdrant = urlparse(qdrant_url)
+    allow_remote_http = bool(getattr(args, "allow_http", False))
+    if (
+        parsed_qdrant.scheme == "http"
+        and not _is_local_http_qdrant(qdrant_url)
+        and qdrant_key
+        and not allow_remote_http
+    ):
+        raise ValueError(
+            "Remote Qdrant uses plaintext HTTP with an API key. "
+            "Use HTTPS or rerun self-enrich with --allow-http."
+        )
+    if _is_local_http_qdrant(qdrant_url) or allow_remote_http:
+        params.append("--allow-insecure-api-key")
+    return params
+
+
+def cmd_self_enrich(args):
+    mode = "APPLY" if args.apply else "DRY-RUN"
+    scope = _self_enrich_scope(args.state, args.suburb)
+    print(f"[self-enrich] mode={mode} scope={scope} source=official+portal")
+    try:
+        params = build_self_enrich_params(args)
+    except ValueError as exc:
+        print(f"[self-enrich] Error: {exc}")
+        return 2
     return run_script("bulk_enrich_master.py", params)
 
 
@@ -260,6 +444,8 @@ def cmd_crawl_cluster(args):
         params.extend(["--proxy-file", args.proxy_file])
     if args.dry_run:
         params.append("--dry-run")
+    if getattr(args, "headful", False):
+        params.append("--headful")
     return run_script(str(Path("app") / "crawler_runner.py"), params)
 
 
@@ -613,6 +799,39 @@ def cmd_serve_api(args):
         print("\n[CLI] Server stopped.")
 
 
+def cmd_benchmark(args):
+    """Run data pipeline benchmark suite at 1K, 10K, or 100K records."""
+    from scripts.benchmark_pipeline import run_benchmark_scale, generate_markdown_report, REPO_ROOT
+    scales = [args.scale] if args.scale else [1_000, 10_000, 100_000]
+    results = []
+    for s in scales:
+        res = run_benchmark_scale(
+            scale=s,
+            workers=args.workers,
+            batch_size=args.batch_size,
+            simulate_crash=not args.no_crash
+        )
+        results.append(res)
+    output_file = str(REPO_ROOT / "docs" / "data_pipeline_benchmark_report.md")
+    generate_markdown_report(results, output_file)
+    return 0
+
+
+def cmd_dashboard(args):
+    """Render operational dashboard with live system metrics."""
+    from app.operations.pipeline_dashboard import PipelineDashboard
+    dash = PipelineDashboard(target_volume=args.target_volume)
+    dash.update_metrics(
+        discovered=args.discovered,
+        processed=args.processed,
+        succeeded=args.succeeded,
+        failed=args.failed,
+        enriched=args.enriched
+    )
+    print(dash.render_cli())
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # CLI PARSER ENTRYPOINT
 # ---------------------------------------------------------------------------
@@ -668,8 +887,33 @@ def main():
     p_enrich.add_argument("--limit", type=int, default=None, help="Total points limit")
     p_enrich.add_argument("--dry-run", action="store_true", help="Simulate without writing updates")
     p_enrich.add_argument("--force", action="store_true", help="Force re-enrichment of existing fields")
+    p_enrich.add_argument("--skip-portal", action="store_true", help="Skip live portal scraping / profile hydration")
+    p_enrich.add_argument("--portal-fields", nargs="+", default=None, help="Only persist these verified portal fields")
+    p_enrich.add_argument("--no-images", action="store_true", help="Do not persist image URLs")
+    p_enrich.add_argument("--property-browser-fallback", action="store_true", help="Self-scrape exact public property profiles in reusable Chrome")
+    p_enrich.add_argument("--property-browser-headless", action="store_true", help="Run browser fallback headless (less reliable on protected portals)")
+    p_enrich.add_argument("--use-property-source", action="store_true", help="Opt in to reading another scraped Qdrant collection")
+    p_enrich.add_argument("--rollback-journal", default=None, help="Gzip JSONL before-image journal for writes")
 
-    # 9. crawl-cluster (Phase 1)
+    # 9. self-enrich (safe, concise self-scrape preset)
+    p_self = subparsers.add_parser(
+        "self-enrich",
+        help="Self-scrape verified property fields with safe defaults",
+    )
+    p_self.add_argument("state", choices=SELF_ENRICH_STATES, help="One Australian state")
+    p_self.add_argument("--suburb", default=None, help="Optional suburb scope")
+    p_self.add_argument("--apply", action="store_true", help="Write verified sparse patches; default is a 5-record dry-run")
+    p_self.add_argument("--refresh", action="store_true", help="Refresh sources and restart this scope from the beginning")
+    p_self.add_argument("--workers", type=int, default=None, help="Override workers (dry-run: 1, apply: 2)")
+    p_self.add_argument("--batch-size", type=int, default=None, help="Override batch size (dry-run: 5, apply: 25)")
+    p_self.add_argument("--limit", type=int, default=None, help="Override record limit (dry-run: 5, apply: unlimited)")
+    p_self.add_argument("--fast", action="store_true", help="Run a bounded one-record bed/bath probe with short browser timeout")
+    p_self.add_argument("--fields", nargs="+", choices=SELF_ENRICH_FIELDS, default=None, help="Verified fields to scrape (fast default: bed bath)")
+    p_self.add_argument("--allow-http", action="store_true", help="Explicitly allow an API key to a remote Qdrant over plaintext HTTP")
+    p_self.add_argument("--local", action="store_true", help="Use local Qdrant at 127.0.0.1:6333 instead of QDRANT_URI")
+    p_self.add_argument("--local-api-key", default=None, help="Override LOCAL_QDRANT_API_KEY (default: local-qdrant-key)")
+
+    # 10. crawl-cluster (Phase 1)
     p_crawl = subparsers.add_parser("crawl-cluster", help="Run distributed stealth Playwright crawler with proxy rotation")
     p_crawl.add_argument("--status", default="sale", choices=["sale", "rent", "sold"], help="Listing status")
     p_crawl.add_argument("--suburbs", nargs="+", default=["Sydney", "Parramatta"], help="Suburbs to crawl")
@@ -678,6 +922,7 @@ def main():
     p_crawl.add_argument("--max-pages", type=int, default=3, help="Max search pages per suburb")
     p_crawl.add_argument("--proxy-file", default=None, help="Path to proxy list text file")
     p_crawl.add_argument("--dry-run", action="store_true", help="Scrape without writing to Qdrant")
+    p_crawl.add_argument("--headful", action="store_true", help="Launch visible browser window (helps bypass anti-bot challenges)")
 
     # 10. test-proxies (Phase 1)
     subparsers.add_parser("test-proxies", help="Test smart proxy pool, inspect Australian fingerprints & availability")
@@ -750,6 +995,31 @@ def main():
     p_parcel.add_argument("--suburb", default="Sydney", help="Suburb name")
     p_parcel.add_argument("--state", default="NSW", help="State code (default: NSW)")
 
+    # 19. view-payload
+    p_view = subparsers.add_parser("view-payload", help="Inspect and display payloads of sold, sale, or rent properties")
+    p_view.add_argument("--status", choices=["sold", "sale", "rent", "off_market", "all"], default="sold", help="Listing status (default: sold)")
+    p_view.add_argument("--state", default=None, help="Filter by State (NSW, VIC, QLD, ACT, etc.)")
+    p_view.add_argument("--suburb", default=None, help="Filter by Suburb name")
+    p_view.add_argument("--limit", type=int, default=1, help="Number of records to display (default: 1)")
+    p_view.add_argument("--collection", default="PropertyMaster", help="Target collection (default: PropertyMaster)")
+    p_view.add_argument("--raw-json", action="store_true", help="Print only raw JSON")
+
+    # 20. benchmark
+    p_bench = subparsers.add_parser("benchmark", help="Run empirical pipeline benchmark suite across 1K, 10K, or 100K records")
+    p_bench.add_argument("--scale", type=int, choices=[1000, 10000, 100000], default=None, help="Specific benchmark scale (default: all)")
+    p_bench.add_argument("--workers", type=int, default=8, help="Worker threads (default: 8)")
+    p_bench.add_argument("--batch-size", type=int, default=250, help="Batch size (default: 250)")
+    p_bench.add_argument("--no-crash", action="store_true", help="Skip simulated crash and recovery testing")
+
+    # 21. dashboard
+    p_dash = subparsers.add_parser("dashboard", help="Render operational pipeline dashboard with metrics and costs")
+    p_dash.add_argument("--target-volume", type=int, default=16000000, help="Target volume (default: 16M)")
+    p_dash.add_argument("--discovered", type=int, default=16000000, help="Discovered records count")
+    p_dash.add_argument("--processed", type=int, default=1550000, help="Processed records count")
+    p_dash.add_argument("--succeeded", type=int, default=1542000, help="Succeeded records count")
+    p_dash.add_argument("--failed", type=int, default=8000, help="Failed records count")
+    p_dash.add_argument("--enriched", type=int, default=1450000, help="Enriched records count")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -766,6 +1036,7 @@ def main():
         "enrich-sold": cmd_enrich_sold,
         "dedup": cmd_dedup,
         "bulk-enrich": cmd_bulk_enrich,
+        "self-enrich": cmd_self_enrich,
         "crawl-cluster": cmd_crawl_cluster,
         "test-proxies": cmd_test_proxies,
         "train-avm": cmd_train_avm,
@@ -776,6 +1047,9 @@ def main():
         "geofence-monitor": cmd_geofence_monitor,
         "parcel-inspect": cmd_parcel_inspect,
         "serve-api": cmd_serve_api,
+        "view-payload": cmd_view_payload,
+        "benchmark": cmd_benchmark,
+        "dashboard": cmd_dashboard,
     }
 
     cmd_fn = dispatch.get(args.command)

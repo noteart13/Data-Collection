@@ -47,28 +47,72 @@ class AreaSchema(BaseModel):
         return None
 
 
+class AreaBreakdownSchema(BaseModel):
+    landArea: Optional[float] = None
+    internalFloorArea: Optional[float] = None
+    buildingArea: Optional[float] = None
+    strataEntitlementArea: Optional[float] = None
+    parentParcelArea: Optional[float] = None
+    unit: str = "sqM"
+
+
+class ValuationSchema(BaseModel):
+    mid: Optional[float] = None
+    low: Optional[float] = None
+    high: Optional[float] = None
+    provider: Optional[str] = None
+    valuationDate: Optional[str] = None
+    confidence: Optional[Union[str, float]] = None
+    disclaimer: Optional[str] = None
+
+
+class FieldProvenanceSchema(BaseModel):
+    sourceName: str
+    sourceUrl: str
+    sourceRecordId: Optional[str] = None
+    sourceField: str
+    retrievedAt: str
+    observedAt: Optional[str] = None
+    method: str
+    addressMatch: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    verificationStatus: str
+    evidenceHash: str
+    datasetVersion: Optional[str] = None
+    licence: Optional[str] = None
+    areaType: Optional[str] = None
+
+
+class ProvenanceSummarySchema(BaseModel):
+    verificationStatus: str = "unverified"
+    verifiedFieldCount: int = 0
+    fieldCount: int = 0
+    dataSources: List[str] = Field(default_factory=list)
+    fetchedAt: Optional[str] = None
+
+
 class PricingSchema(BaseModel):
     councilBill: Optional[str] = None
     waterBillPeriod: Optional[str] = None
-    pricingOptions: Optional[str] = "Market Valuation"
-    authority: Optional[str] = "Private Treaty"
-    priceIncludes: List[str] = Field(default_factory=lambda: ["Fixtures and fittings", "Fixed floor coverings"])
+    pricingOptions: Optional[str] = None
+    authority: Optional[str] = None
+    priceIncludes: List[str] = Field(default_factory=list)
     weeklyRent: Optional[int] = None
     estimatedYield: Optional[str] = None
 
 
 class FeaturesSchema(BaseModel):
-    garage: Optional[int] = Field(default=0, ge=0)
-    floorNo: Optional[int] = Field(default=1, ge=0)
+    garage: Optional[int] = Field(default=None, ge=0)
+    floorNo: Optional[int] = Field(default=None, ge=0)
     indoorFeatures: List[str] = Field(default_factory=list)
     outdoorAmenities: List[str] = Field(default_factory=list)
-    floorCovering: List[str] = Field(default_factory=lambda: ["None"])
-    roof: List[str] = Field(default_factory=lambda: ["Other"])
-    view: List[str] = Field(default_factory=lambda: ["Suburban"])
+    floorCovering: List[str] = Field(default_factory=list)
+    roof: List[str] = Field(default_factory=list)
+    view: List[str] = Field(default_factory=list)
     appliances: List[str] = Field(default_factory=list)
     buildingAmenities: List[str] = Field(default_factory=list)
-    basement: str = Field(default="None")
-    displayAddress: str = Field(default="fullAddress")
+    basement: Optional[str] = None
+    displayAddress: Optional[str] = None
 
 
 class HistorySaleItem(BaseModel):
@@ -84,7 +128,7 @@ class CadastralParcelSchema(BaseModel):
     plan: Optional[str] = None
     section: Optional[str] = None
     cadastral_key: Optional[str] = None
-    zoning_code: Optional[str] = "R2"
+    zoning_code: Optional[str] = None
     zoning_description: Optional[str] = None
     calculated_area_sqm: Optional[float] = None
     bbox: Optional[List[float]] = None
@@ -130,20 +174,22 @@ class PropertyMasterPayload(BaseModel):
     title: str = Field(..., description="Canonical full address title")
     description: Optional[str] = ""
 
-    propertyType: str = Field(default="House", description="Dwelling type (House, Unit, Townhouse, Commercial, Land)")
-    natureOfProperty: Optional[str] = "Residence / Dwelling"
+    propertyType: Optional[str] = Field(default=None, description="Dwelling type (House, Unit, Townhouse, Commercial, Land)")
+    natureOfProperty: Optional[str] = None
 
     bed: Optional[int] = Field(None, ge=0, le=50)
     bath: Optional[int] = Field(None, ge=0, le=30)
     area: AreaSchema = Field(default_factory=AreaSchema)
+    areas: Optional[AreaBreakdownSchema] = None
     features: FeaturesSchema = Field(default_factory=FeaturesSchema)
 
     coordinates: Optional[CoordinatesSchema] = None
-    constructionYear: Optional[str] = "N/A"
-    structuralRemodelYear: Optional[str] = "N/A"
-    architecturalStyle: Optional[str] = "None"
+    constructionYear: Optional[str] = None
+    structuralRemodelYear: Optional[str] = None
+    architecturalStyle: Optional[str] = None
 
     expectedPrice: Optional[float] = None
+    valuation: Optional[ValuationSchema] = None
     valuationType: Optional[str] = None
     valuation_mid: Optional[int] = None
     valuation_low: Optional[int] = None
@@ -152,8 +198,8 @@ class PropertyMasterPayload(BaseModel):
     valuationMethod: Optional[str] = None
     pricing: Optional[PricingSchema] = Field(default_factory=PricingSchema)
 
-    status: str = Field(default="off_market")
-    listingOption: str = Field(default="off_market")
+    status: str = Field(default="unknown")
+    listingOption: str = Field(default="unknown")
     published: bool = True
     recommended: bool = False
 
@@ -180,6 +226,9 @@ class PropertyMasterPayload(BaseModel):
 
     # Provenance and Data Quality
     data_quality: Optional[DataQualityMetadata] = None
+    fieldProvenance: Dict[str, FieldProvenanceSchema] = Field(default_factory=dict)
+    provenance: Optional[ProvenanceSummarySchema] = None
+    legacyUnverified: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
 
     # Audit Timestamps (ISO 8601)
     createdAt: Optional[str] = None

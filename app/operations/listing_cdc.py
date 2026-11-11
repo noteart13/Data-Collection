@@ -62,7 +62,7 @@ class ListingCDCEngine:
         events = []
         title = payload.get("title") or scraped_data.get("address") or f"Point {point_id}"
 
-        old_status = payload.get("status", "off_market")
+        old_status = payload.get("status", "unknown")
         new_status = scraped_data.get("status")
 
         # -------------------------------------------------------------

@@ -6,14 +6,22 @@ and integrated SmartProxyManager rotation to scrape Australian real estate listi
 
 import asyncio
 import logging
+import os
 import random
 import re
+import time
 from typing import Optional, List, Dict, Any, Tuple
 from bs4 import BeautifulSoup
 
 from app.operations.proxy_manager import SmartProxyManager, ProxyNode
 
 logger = logging.getLogger("stealth_crawler")
+
+try:
+    from playwright_stealth import stealth_async
+    HAS_PLAYWRIGHT_STEALTH = True
+except ImportError:
+    HAS_PLAYWRIGHT_STEALTH = False
 
 # Stealth injection script to remove bot automation artifacts
 STEALTH_INJECTION_JS = """
@@ -23,24 +31,20 @@ Object.defineProperty(navigator, 'webdriver', {
 });
 
 // 2. Overwrite chrome runtime object
-window.chrome = {
-    runtime: {},
-    loadTimes: function() {},
-    csi: function() {},
-    app: {}
-};
+if (!window.chrome) {
+    window.chrome = {};
+}
+window.chrome.runtime = window.chrome.runtime || {};
+window.chrome.loadTimes = window.chrome.loadTimes || function() {};
+window.chrome.csi = window.chrome.csi || function() {};
+window.chrome.app = window.chrome.app || {};
 
-// 3. Spoof plugins & mimeTypes
-Object.defineProperty(navigator, 'plugins', {
-    get: () => [1, 2, 3, 4, 5]
-});
-
-// 4. Spoof Australian English languages
+// 3. Spoof Australian English languages
 Object.defineProperty(navigator, 'languages', {
     get: () => ['en-AU', 'en-GB', 'en-US', 'en']
 });
 
-// 5. Spoof Notification permission
+// 4. Spoof Notification permission
 const originalQuery = window.navigator.permissions.query;
 window.navigator.permissions.query = (parameters) => (
     parameters.name === 'notifications' ?
@@ -65,6 +69,7 @@ class StealthCrawler:
         self.proxy_manager = proxy_manager or SmartProxyManager()
         self.headless = headless
         self.timeout_ms = timeout_ms
+        self.last_error = ""
         self._playwright = None
         self._browser = None
 
@@ -80,16 +85,20 @@ class StealthCrawler:
         try:
             from playwright.async_api import async_playwright
             self._playwright = await async_playwright().start()
-            self._browser = await self._playwright.chromium.launch(
-                headless=self.headless,
-                args=[
+            launch_options = {
+                "headless": self.headless,
+                "args": [
                     "--disable-blink-features=AutomationControlled",
                     "--disable-features=IsolateOrigins,site-per-process",
                     "--no-sandbox",
                     "--disable-dev-shm-usage",
                     "--disable-gpu",
-                ]
-            )
+                ],
+            }
+            browser_channel = os.environ.get("STEALTH_BROWSER_CHANNEL", "chrome").strip()
+            if browser_channel:
+                launch_options["channel"] = browser_channel
+            self._browser = await self._playwright.chromium.launch(**launch_options)
             logger.info("Stealth Playwright Chromium engine started.")
         except Exception as e:
             logger.error(f"Failed to start Playwright browser: {e}")
@@ -117,6 +126,7 @@ class StealthCrawler:
         proxy_config = proxy.to_playwright_proxy() if proxy else None
         fingerprint = self.proxy_manager.get_australian_fingerprint()
 
+        self.last_error = ""
         context = None
         page = None
         t0 = time.time()
@@ -140,13 +150,22 @@ class StealthCrawler:
             page = await context.new_page()
             page.set_default_timeout(self.timeout_ms)
 
+            # Apply advanced playwright-stealth if available
+            if HAS_PLAYWRIGHT_STEALTH:
+                try:
+                    await stealth_async(page)
+                except Exception as stealth_err:
+                    logger.debug(f"playwright_stealth hook warning: {stealth_err}")
+
             # Navigate
             response = await page.goto(url, wait_until="domcontentloaded")
             status_code = response.status if response else 0
 
             # Check for blocking status
             if status_code in (403, 429):
-                logger.warning(f"Access blocked (HTTP {status_code}) on {url} using proxy {proxy.host if proxy else 'DIRECT'}")
+                err_msg = f"HTTP {status_code} Access Blocked by Portal/WAF (Akamai/Kasada anti-bot active on {url} using proxy {proxy.host if proxy else 'DIRECT'})"
+                logger.warning(err_msg)
+                self.last_error = err_msg
                 self.proxy_manager.report_failure(proxy, status_code=status_code)
                 return None, proxy
 
@@ -161,9 +180,12 @@ class StealthCrawler:
 
             html = await page.content()
 
-            # Anti-bot text check (Cloudflare, Akamai, PerimeterX)
-            if any(term in html.lower() for term in ["checking your browser", "cloudflare ray id", "access denied", "please verify you are a human"]):
-                logger.warning(f"Bot challenge screen encountered on {url} with proxy {proxy.host if proxy else 'DIRECT'}")
+            # Anti-bot text check (Cloudflare, Akamai, PerimeterX, Kasada)
+            challenge_markers = ["checking your browser", "cloudflare ray id", "access denied", "please verify you are a human", "x-kpsdk"]
+            if any(term in html.lower() for term in challenge_markers):
+                err_msg = f"Bot challenge screen encountered on {url} (proxy: {proxy.host if proxy else 'DIRECT'})"
+                logger.warning(err_msg)
+                self.last_error = err_msg
                 self.proxy_manager.report_failure(proxy, status_code=403)
                 return None, proxy
 
@@ -172,7 +194,9 @@ class StealthCrawler:
             return html, proxy
 
         except Exception as e:
-            logger.error(f"Error fetching {url}: {e}")
+            err_msg = f"Error fetching {url}: {e}"
+            logger.error(err_msg)
+            self.last_error = err_msg
             self.proxy_manager.report_failure(proxy, status_code=500)
             return None, proxy
         finally:

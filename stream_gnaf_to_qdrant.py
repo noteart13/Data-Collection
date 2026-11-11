@@ -1,6 +1,7 @@
 import io
 import os
 import sys
+import time
 import uuid
 import zipfile
 import urllib.request
@@ -217,50 +218,50 @@ def build_property_payload(r, streets, localities, geocodes, state, now_iso):
     coord_payload = {"lat": coords[0], "lon": coords[1]} if coords else None
 
     payload = {
-        "architecturalStyle": "None",
+        "architecturalStyle": None,
         "area": {"totalArea": None, "unit": "sqM"},
         "bed": None,
         "bath": None,
         "coordinates": coord_payload,
-        "constructionYear": "N/A",
+        "constructionYear": None,
         "expectedPrice": None,
         "street": full_street,
         "state": state,
         "suburb": suburb,
         "city": city,
         "postcode": postcode,
-        "propertyType": "House",
+        "propertyType": None,
         "title": title,
         "description": "",
         "features": {
-            "garage": 0,
-            "floorNo": 1,
+            "garage": None,
+            "floorNo": None,
             "indoorFeatures": [],
             "outdoorAmenities": [],
-            "basement": "None",
-            "floorCovering": ["None"],
-            "roof": ["Other"],
-            "view": ["None"],
-            "appliances": ["None"],
-            "buildingAmenities": ["None"],
+            "basement": None,
+            "floorCovering": [],
+            "roof": [],
+            "view": [],
+            "appliances": [],
+            "buildingAmenities": [],
             "displayAddress": "fullAddress",
         },
-        "structuralRemodelYear": "N/A",
+        "structuralRemodelYear": None,
         "recommended": False,
         "published": False,
         "realestate_url": "",
         "contactInfo": [],
         "images": [],
         "soldDateInfo": "",
-        "listingOption": "off_market",
+        "listingOption": "unknown",
         "pricing": {
-            "waterBillPeriod": "",
-            "councilBill": "",
-            "pricingOptions": "",
-            "authority": "",
-            "priceIncludes": [""],
+            "waterBillPeriod": None,
+            "councilBill": None,
+            "pricingOptions": None,
+            "authority": None,
+            "priceIncludes": [],
         },
-        "status": "off_market",
+        "status": "unknown",
         "historysale": [],
         "slug": pid.lower(),
         "gnaf_pid": pid,
@@ -303,6 +304,7 @@ def robust_upsert(client: QdrantClient, collection_name: str, batch: list, max_r
         except Exception as e:
             if attempt == max_retries:
                 raise
+            print(f"\n[Retry {attempt}/{max_retries}] Upsert to {collection_name} failed ({e}). Retrying in {attempt * 2}s...", flush=True)
             time.sleep(attempt * 2)
 
 

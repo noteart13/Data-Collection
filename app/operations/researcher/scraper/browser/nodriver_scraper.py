@@ -417,14 +417,20 @@ class NoDriverScraper:
             """Delete this scraper's disposable profile after Chrome exits."""
             if not self.user_data_dir:
                 return
-            try:
-                shutil.rmtree(self.user_data_dir)
-            except FileNotFoundError:
-                pass
-            except (PermissionError, OSError) as exc:
-                NoDriverScraper.logger.warning(
-                    f"Unable to remove browser profile {self.user_data_dir}: {exc}"
-                )
+            last_error = None
+            for attempt in range(4):
+                try:
+                    shutil.rmtree(self.user_data_dir)
+                    return
+                except FileNotFoundError:
+                    return
+                except (PermissionError, OSError) as exc:
+                    last_error = exc
+                    if attempt < 3:
+                        time.sleep(0.5 * (attempt + 1))
+            NoDriverScraper.logger.warning(
+                f"Unable to remove browser profile {self.user_data_dir}: {last_error}"
+            )
 
         def force_stop_process(self):
             """Kill only the browser process started by this driver, when available."""

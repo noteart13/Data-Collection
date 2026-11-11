@@ -168,6 +168,7 @@ def main():
     parser.add_argument("--state", default="NSW", help="State to deduplicate (e.g. NSW, ACT)")
     parser.add_argument("--suburb", default=None, help="Specific suburb to deduplicate (optional)")
     parser.add_argument("--dry-run", action="store_true", help="Report duplicates without deleting")
+    parser.add_argument("--limit-suburbs", type=int, default=None, help="Limit number of suburbs to process")
     parser.add_argument("--concurrency", type=int, default=6, help="Number of concurrent worker threads")
     args = parser.parse_args()
 
@@ -196,6 +197,8 @@ def main():
         print(f"Resuming: {len(completed_suburbs):,} suburbs already processed in previous run.")
 
     remaining_suburbs = [s for s in suburbs if s not in completed_suburbs]
+    if args.limit_suburbs:
+        remaining_suburbs = remaining_suburbs[:args.limit_suburbs]
     print(f"Starting deduplication on {len(remaining_suburbs):,} remaining suburbs (Concurrency: {args.concurrency}, Dry-run: {args.dry_run})...\n")
 
     lock = threading.Lock()
